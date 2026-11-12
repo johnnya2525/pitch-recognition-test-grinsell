@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html{color-scheme:light}body{margin:0}</style>
+<title>Low Home Pitch Recognition Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column, sticky progress bar, 30 compact pitch cards, results view swaps in after submit. */
+:root{
+  --bg:#f2f5f3; --surface:#ffffff; --ink:#111b24; --muted:#58656e; --line:#d5dcd9;
+  --seam:#b8322a; --seam-ink:#ffffff; --good:#2a6e4e; --good-bg:#e1f1e8; --bad-bg:#f8e3e1;
+  --chip:#eef2f0; --focus:#1f5fa8;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f171d; --surface:#17222b; --ink:#e8eeeb; --muted:#9aa8a2; --line:#2a3a44;
+  --seam:#e0594f; --seam-ink:#140807; --good:#6fcf9b; --good-bg:#17342a; --bad-bg:#3a1f1d;
+  --chip:#1f2d37; --focus:#7ab4f0; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f171d; --surface:#17222b; --ink:#e8eeeb; --muted:#9aa8a2; --line:#2a3a44;
+  --seam:#e0594f; --seam-ink:#140807; --good:#6fcf9b; --good-bg:#17342a; --bad-bg:#3a1f1d;
+  --chip:#1f2d37; --focus:#7ab4f0; color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:720px;margin:0 auto}
+header{padding-block:28px 8px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,8vw,52px);line-height:1;letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+.sub{margin:10px 0 0;color:var(--muted);max-width:52ch}
+.zone{width:64px;height:76px;border:2px solid var(--ink);display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);flex:none}
+.zone i{border:1px solid var(--line)}
+.zone i.hit{background:var(--seam)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;margin-top:16px}
+.panel h2{font-family:var(--display);font-size:22px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 6px}
+.panel p{margin:0 0 12px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:6px;
+  border:2px solid var(--ink);background:transparent;color:var(--ink);font:600 15px var(--body);text-decoration:none;cursor:pointer}
+.btn:hover{background:var(--chip)}
+.btn.primary{background:var(--seam);border-color:var(--seam);color:var(--seam-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:focus-visible,.chip input:focus-visible+span,input[type=text]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+label.field{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+input[type=text]{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:16px var(--body)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:10px 0;margin-top:16px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.track{flex:1;height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--seam);transition:width .2s}
+.count{font:700 18px var(--display);letter-spacing:.04em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.q{display:grid;grid-template-columns:44px 1fr;gap:6px 12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.q:last-child{border-bottom:0}
+.num{font:700 28px/1 var(--display);color:var(--muted);padding-top:6px}
+.q.done .num{color:var(--seam)}
+.clip{margin-bottom:10px}
+.clip video{display:block;width:100%;max-width:260px;max-height:340px;border-radius:6px;background:#000}
+.noclip{display:inline-block;margin-bottom:10px;padding:10px 14px;border:1px dashed var(--line);border-radius:6px;color:var(--muted);font-size:14px}
+.grp{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.grp+.grp{margin-top:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip span{display:block;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:6px;background:var(--chip);font-weight:500;font-size:15px}
+.chip input:checked+span{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.submit{margin-top:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.note{color:var(--muted);font-size:14px}
+.score{font:700 clamp(64px,20vw,108px)/1 var(--display);letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.score small{font-size:.4em;color:var(--muted)}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
+.stat{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--bg)}
+.stat b{display:block;font:700 28px var(--display);font-variant-numeric:tabular-nums}
+.rev{display:grid;grid-template-columns:36px 1fr;gap:4px 10px;padding:10px 12px;border-radius:6px;margin-top:8px;font-size:15px}
+.rev.ok{background:var(--good-bg)} .rev.no{background:var(--bad-bg)} .rev.plain{background:var(--chip)}
+.rev .n{font:700 20px var(--display)}
+.rev small{display:block;color:var(--muted)}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(10,16,20,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal .box{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:20px;max-width:420px;width:100%}
+.modal h2{font-family:var(--display);font-size:24px;letter-spacing:.03em;text-transform:uppercase;margin:0 0 8px}
+.modal p{margin:0 0 16px;color:var(--muted)}
+.modal .row{display:flex;flex-wrap:wrap;gap:12px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Low Home Pitch Recognition Test</h1>
+    <p class="sub">Watch each clip from the low home camera angle, then call the pitch type and whether it was a strike or a ball.</p>
+  </div>
+</header>
+
+<div id="test">
+  <section class="panel">
+    <h2>Before you start</h2>
+    <p>Each question has its own short clip. Play it as many times as you like, then make your call.</p>
+    <div style="margin-top:16px">
+      <label class="field" for="who">Name or email (so your results can be matched to you)</label>
+      <input type="text" id="who" autocomplete="off" placeholder="e.g. first and last name">
+    </div>
+  </section>
+
+  <div class="bar" aria-live="polite">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="count"><span id="answered">0</span> / <span id="total">30</span> called</div>
+  </div>
+
+  <form id="qs" class="panel" style="margin-top:0;border-top:0;border-radius:0 0 8px 8px"></form>
+
+  <div class="submit">
+    <button class="btn primary" id="submit" type="button">Submit and get answers</button>
+    <span class="note" id="warn" hidden></span>
+  </div>
+</div>
+
+<div id="results" hidden>
+  <section class="panel">
+    <h2 id="rtitle">Your calls</h2>
+    <div id="scorebox" hidden>
+      <div class="score"><span id="sc">0</span><small> / 30</small></div>
+      <div class="split">
+        <div class="stat"><b id="stype">0</b>pitch type right</div>
+        <div class="stat"><b id="scall">0</b>ball or strike right</div>
+      </div>
+    </div>
+    <p id="nokey">Your calls are recorded below. The answer key has not been added to this test yet, so there is no score.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">
+      <button class="btn primary" id="copy" type="button">Copy my results</button>
+      <button class="btn" id="redo" type="button">Start over</button>
+    </div>
+    <p class="note" id="copied" hidden style="margin-top:10px"></p>
+  </section>
+  <section class="panel" id="review"></section>
+</div>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle" hidden>
+  <div class="box">
+    <h2 id="mtitle">Some pitches are unanswered</h2>
+    <p id="mtext"></p>
+    <div class="row">
+      <button class="btn" id="mback" type="button">Go back</button>
+      <button class="btn primary" id="mgo" type="button">Submit anyway</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  // ANSWER KEY: fill in the correct call for each pitch, e.g. {type:"Fastball",call:"Strike"}. Leave null until known.
+  var KEY = ["Fastball|Strike","Changeup|Strike","Fastball|Strike","Curveball|Strike","Changeup|Strike","Changeup|Ball","Fastball|Ball","Curveball|Ball","Changeup|Strike","Curveball|Ball","Curveball|Ball","Fastball|Strike","Changeup|Ball","Curveball|Ball","Changeup|Strike","Changeup|Ball","Fastball|Ball","Curveball|Ball","Fastball|Ball","Curveball|Ball","Fastball|Strike","Changeup|Strike","Fastball|Strike","Changeup|Strike","Changeup|Strike","Changeup|Ball","Fastball|Strike","Fastball|Strike","Changeup|Strike","Fastball|Strike"].map(function(s){ var p=s.split("|"); return {type:p[0],call:p[1]}; });
+  var N = 30, TYPES = ["Fastball","Changeup","Curveball"], CALLS = ["Strike","Ball"];
+  var LS = "pitch-recognition-v1";
+  var ans = [], form = document.getElementById("qs");
+  for (var i=0;i<N;i++) ans.push({type:null,call:null});
+
+  function load(){ try{ var d = JSON.parse(localStorage.getItem(LS)||"null"); if(d&&d.ans&&d.ans.length===N){ ans=d.ans; document.getElementById("who").value=d.who||""; } }catch(e){} }
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify({ans:ans,who:document.getElementById("who").value})); }catch(e){} }
+  function clearSaved(){ try{ localStorage.removeItem(LS); }catch(e){} }
+
+  function chip(name,val,checked){
+    return '<label class="chip"><input type="radio" name="'+name+'" value="'+val+'"'+(checked?' checked':'')+'><span>'+val+'</span></label>';
+  }
+  function build(){
+    var h = "";
+    for (var i=0;i<N;i++){
+      h += '<div class="q" id="q'+i+'"><div class="num">'+(i+1)+'</div><div style="min-width:0"><div class="clip"><video src="videos/Q'+(i+1)+'.mp4#t=0.1" poster="videos/Q'+(i+1)+'.jpg" controls playsinline loop preload="metadata" aria-label="Pitch clip for question '+(i+1)+'"></video></div><div class="grp" role="radiogroup" aria-label="Question '+(i+1)+' pitch type">';
+      TYPES.forEach(function(t){ h += chip("t"+i,t,ans[i].type===t); });
+      h += '</div><div class="grp" role="radiogroup" aria-label="Question '+(i+1)+' call">';
+      CALLS.forEach(function(c){ h += chip("c"+i,c,ans[i].call===c); });
+      h += '</div></div></div>';
+    }
+    form.innerHTML = h;
+    Array.prototype.forEach.call(form.querySelectorAll("video"), function(v){
+      v.addEventListener("error", function(){ var d=document.createElement("div"); d.className="noclip"; d.textContent="Clip not added yet"; v.parentNode.replaceChild(d,v); });
+    });
+    refresh();
+  }
+  function refresh(){
+    var done=0;
+    for (var i=0;i<N;i++){
+      var ok = ans[i].type && ans[i].call; if(ok) done++;
+      var el = document.getElementById("q"+i); if(el) el.className = ok ? "q done" : "q";
+    }
+    document.getElementById("answered").textContent = done;
+    document.getElementById("fill").style.width = (done/N*100)+"%";
+    return done;
+  }
+  form.addEventListener("change", function(e){
+    var n = e.target.name; if(!n) return;
+    var i = parseInt(n.slice(1),10);
+    if(n.charAt(0)==="t") ans[i].type = e.target.value; else ans[i].call = e.target.value;
+    refresh(); save();
+  });
+  document.getElementById("who").addEventListener("input", save);
+  form.addEventListener("submit", function(e){ e.preventDefault(); });
+
+  function label(a){ return (a&&a.type&&a.call) ? a.type+" - "+a.call : "No answer"; }
+  var hasKey = KEY.every(function(k){return !!k;});
+
+  document.getElementById("submit").addEventListener("click", function(){
+    var done = refresh();
+    if (done < N){
+      var left = N-done;
+      document.getElementById("mtext").textContent = left+" of "+N+" pitches "+(left===1?"has":"have")+" no answer. Unanswered pitches will count as wrong.";
+      document.getElementById("modal").hidden = false;
+      document.getElementById("mgo").focus();
+      return;
+    }
+    show();
+  });
+  document.getElementById("mback").addEventListener("click", function(){ document.getElementById("modal").hidden = true; });
+  document.getElementById("mgo").addEventListener("click", function(){ document.getElementById("modal").hidden = true; show(); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape") document.getElementById("modal").hidden = true; });
+  function show(){
+    var typeRight=0, callRight=0, full=0, r="";
+    for (var i=0;i<N;i++){
+      var a=ans[i], k=KEY[i], cls="plain", extra="";
+      if (hasKey){
+        var tOk = a.type===k.type, cOk = a.call===k.call;
+        if(tOk) typeRight++; if(cOk) callRight++;
+        if(tOk&&cOk){ full++; cls="ok"; } else { cls="no"; extra='<small>Correct: '+k.type+' - '+k.call+'</small>'; }
+      }
+      r += '<div class="rev '+cls+'"><div class="n">'+(i+1)+'</div><div>'+label(a)+extra+'</div></div>';
+    }
+    document.getElementById("review").innerHTML = '<h2>Question by question</h2>'+r;
+    if (hasKey){
+      document.getElementById("scorebox").hidden=false; document.getElementById("nokey").hidden=true;
+      document.getElementById("sc").textContent=full; document.getElementById("stype").textContent=typeRight; document.getElementById("scall").textContent=callRight;
+      document.getElementById("rtitle").textContent="Your score";
+    }
+    document.getElementById("test").hidden=true; document.getElementById("results").hidden=false;
+    window.scrollTo(0,0);
+  }
+  function resultsText(){
+    var who = document.getElementById("who").value.trim(), lines=[];
+    lines.push("Low Home Pitch Recognition Test"); if(who) lines.push("Name: "+who);
+    if(hasKey){ var f=0; for(var i=0;i<N;i++){ if(ans[i].type===KEY[i].type&&ans[i].call===KEY[i].call) f++; } lines.push("Score: "+f+" / "+N); }
+    for (var j=0;j<N;j++) lines.push((j+1)+". "+label(ans[j]));
+    return lines.join("\n");
+  }
+  document.getElementById("copy").addEventListener("click", function(){
+    var t = resultsText(), msg = document.getElementById("copied");
+    function done(s){ msg.hidden=false; msg.textContent=s; }
+    function fallback(){
+      var ta=document.createElement("textarea"); ta.value=t; ta.style.cssText="width:100%;height:160px;margin-top:10px";
+      msg.parentNode.insertBefore(ta,msg.nextSibling); ta.select(); done("Select the text above and copy it.");
+    }
+    try{ navigator.clipboard.writeText(t).then(function(){done("Copied. Paste it into an email or message to send it in.");}, fallback); }catch(e){ fallback(); }
+  });
+  document.getElementById("redo").addEventListener("click", function(){
+    ans=[]; for (var i=0;i<N;i++) ans.push({type:null,call:null});
+    clearSaved(); document.getElementById("who").value="";
+    document.getElementById("warn").hidden=true; document.getElementById("copied").hidden=true;
+    document.getElementById("results").hidden=true; document.getElementById("test").hidden=false;
+    build(); window.scrollTo(0,0);
+  });
+  load(); build();
+})();
+</script>
+
+</body>
+</html>
